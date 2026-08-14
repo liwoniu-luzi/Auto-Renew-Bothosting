@@ -2,8 +2,8 @@ name: Auto Renew Bot-hosting
 
 on:
   schedule:
-    - cron: '0 1 * * *'          # 每天 UTC 1 点（北京时间 9 点）
-  workflow_dispatch:               # 手动触发
+    - cron: '0 1 * * *'
+  workflow_dispatch:
 
 concurrency:
   group: auto-renew-bot
@@ -30,7 +30,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          # 由于没有 requirements.txt，使用固定 key，避免 hashFiles 返回空
           key: ${{ runner.os }}-pip-seleniumbase-4.30.0
           restore-keys: |
             ${{ runner.os }}-pip-seleniumbase-
@@ -57,9 +56,18 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          # 手动启动 Xvfb，确保 DISPLAY 格式为 :99.0，避免 python-xlib 解析错误
-          Xvfb :99 -screen 0 1920x1080x24 &
+          # 启动 Xvfb，添加 -ac 参数
+          Xvfb :99 -screen 0 1920x1080x24 -ac &
           export DISPLAY=:99.0
+          # 等待 Xvfb 就绪
+          for i in {1..10}; do
+            if xset -display :99.0 q >/dev/null 2>&1; then
+              echo "✅ Xvfb is ready"
+              break
+            fi
+            echo "⏳ Waiting for Xvfb..."
+            sleep 1
+          done
           python3 app.py
 
       - name: 🧽 清理进程和临时文件
