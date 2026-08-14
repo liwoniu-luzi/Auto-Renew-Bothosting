@@ -2,7 +2,7 @@ name: Auto Renew Bot-hosting
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # 每天 UTC 1 点 (北京时间 9 点)
+    - cron: '0 1 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -30,6 +30,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
+          # 如果没有 requirements.txt，key 可以简化为固定值，或使用日期变量
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
@@ -38,7 +39,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb x11-utils xdotool scrot fonts-noto-cjk jq
-          pip install seleniumbase==4.30.0 requests==2.32.3
+          pip install seleniumbase==4.30.0   # 只固定 seleniumbase，requests 自动安装
           seleniumbase install chromedriver
 
       - name: ⚙ 设置代理 (Hysteria 1)
@@ -55,7 +56,6 @@ jobs:
           SESSION_TOKEN: ${{ secrets.SESSION_TOKEN }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-          # 从代理步骤获取的变量会通过 $GITHUB_ENV 传递，无需手动声明
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
             python3 app.py
@@ -78,7 +78,7 @@ jobs:
           count=0
           for run_id in $runs; do
             count=$((count + 1))
-            if [ $count -gt 5 ]; then  # 保留最近 5 条记录
+            if [ $count -gt 5 ]; then
               echo "删除运行记录: $run_id"
               gh run delete $run_id || true
             fi
