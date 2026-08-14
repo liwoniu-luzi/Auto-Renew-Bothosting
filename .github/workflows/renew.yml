@@ -2,8 +2,8 @@ name: Auto Renew Bot-hosting
 
 on:
   schedule:
-    - cron: '0 1 * * *'
-  workflow_dispatch:
+    - cron: '0 1 * * *'          # 每天 UTC 1 点（北京时间 9 点）
+  workflow_dispatch:               # 手动触发
 
 concurrency:
   group: auto-renew-bot
@@ -30,16 +30,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          # 如果没有 requirements.txt，key 可以简化为固定值，或使用日期变量
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          # 由于没有 requirements.txt，使用固定 key，避免 hashFiles 返回空
+          key: ${{ runner.os }}-pip-seleniumbase-4.30.0
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-pip-seleniumbase-
 
       - name: 🛠️ 安装系统依赖和 Python 依赖
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb x11-utils xdotool scrot fonts-noto-cjk jq
-          pip install seleniumbase==4.30.0   # 只固定 seleniumbase，requests 自动安装
+          pip install seleniumbase==4.30.0
           seleniumbase install chromedriver
 
       - name: ⚙ 设置代理 (Hysteria 1)
@@ -57,8 +57,10 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
-            python3 app.py
+          # 手动启动 Xvfb，确保 DISPLAY 格式为 :99.0，避免 python-xlib 解析错误
+          Xvfb :99 -screen 0 1920x1080x24 &
+          export DISPLAY=:99.0
+          python3 app.py
 
       - name: 🧽 清理进程和临时文件
         if: always()
