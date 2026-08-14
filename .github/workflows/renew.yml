@@ -34,8 +34,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb x11-utils xdotool scrot fonts-noto-cjk jq
-          pip install seleniumbase==4.30.0 pyautogui   # 显式安装 pyautogui，避免运行时按需安装失败
-          seleniumbase install chromedriver
+          pip install seleniumbase==4.30.0 pyautogui
+          # 重要：不再手动安装 chromedriver，让 undetected-chromedriver 自动适配
 
       - name: ⚙ 设置代理 (Hysteria)
         env:
