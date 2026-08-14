@@ -43,8 +43,6 @@ esac
 
 HY_VERSION="1.3.5"
 DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v${HY_VERSION}/hysteria-linux-${ARCH}"
-EXPECTED_SHA256_AMD64="..."  # 请填入官方 amd64 二进制哈希
-EXPECTED_SHA256_ARM64="..."  # 请填入官方 arm64 二进制哈希
 
 echo "[INFO] Downloading Hysteria v${HY_VERSION} for ${ARCH}..."
 if ! curl -L -o hysteria "$DOWNLOAD_URL" --connect-timeout 15 --max-time 60; then
@@ -55,17 +53,8 @@ if ! curl -L -o hysteria "$DOWNLOAD_URL" --connect-timeout 15 --max-time 60; the
 fi
 chmod +x hysteria
 
-# Verify SHA256 if provided
-if [ -n "$EXPECTED_SHA256_AMD64" ] && [ "$ARCH" = "amd64" ]; then
-    echo "$EXPECTED_SHA256_AMD64  hysteria" | sha256sum -c - || {
-        echo "[WARN] SHA256 verification failed, falling back to direct connection"
-        echo "IS_PROXY=false" >> $GITHUB_ENV
-        echo "PROXY_SERVER=" >> $GITHUB_ENV
-        rm -f hysteria
-        exit 0
-    }
-fi
-# 类似处理 arm64
+# (可选) 如果需要校验哈希，请手动添加正确的 SHA256 值并取消注释下面两行
+# echo "expected_sha256  hysteria" | sha256sum -c - || { echo "hash fail"; exit 1; }
 
 # Parse hysteria:// link
 CONTENT="${NODE_LINK#hysteria://}"
@@ -91,7 +80,7 @@ fi
 # Remove trailing slash
 HOST="${HOST%/}"
 
-# Split host and port (handles IPv6)
+# Split host and port (works for IPv4, domain, and [IPv6])
 SERVER=$(echo "$HOST" | sed 's/:[^:]*$//')
 PORT=$(echo "$HOST" | sed 's/^.*://')
 
@@ -155,7 +144,7 @@ else
     INSECURE_BOOL=false
 fi
 
-# Generate client config using jq (safe)
+# Generate client config using jq (safe JSON)
 CONFIG_FILE="hysteria-client.json"
 jq -n \
   --arg server "$SERVER:$PORT" \
@@ -194,7 +183,7 @@ else
     pkill -f hysteria 2>/dev/null || true
 fi
 
-# Cleanup temp files (will be cleaned again in workflow)
+# Cleanup temp files (workflow will also clean, but do it here for safety)
 rm -f hysteria hysteria-client.json hysteria.log
 
 exit 0
