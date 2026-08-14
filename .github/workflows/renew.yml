@@ -2,12 +2,8 @@ name: Auto Renew Bot-hosting
 
 on:
   schedule:
-    - cron: '0 1 * * *'
-  workflow_dispatch:
-
-concurrency:
-  group: auto-renew-bot
-  cancel-in-progress: false
+    - cron: '0 1 * * *'   # 每天 UTC 1:00 (北京时间 9:00)
+  workflow_dispatch:       # 支持手动触发
 
 jobs:
   Renew-bot:
@@ -38,10 +34,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb x11-utils xdotool scrot fonts-noto-cjk jq
-          pip install seleniumbase==4.30.0
+          pip install seleniumbase==4.30.0 pyautogui   # 显式安装 pyautogui，避免运行时按需安装失败
           seleniumbase install chromedriver
 
-      - name: ⚙ 设置代理 (Hysteria 1)
+      - name: ⚙ 设置代理 (Hysteria)
         env:
           NODE_LINK: ${{ secrets.NODE_LINK }}
         run: |
@@ -56,19 +52,7 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          # 启动 Xvfb，添加 -ac 参数
-          Xvfb :99 -screen 0 1920x1080x24 -ac &
-          export DISPLAY=:99.0
-          # 等待 Xvfb 就绪
-          for i in {1..10}; do
-            if xset -display :99.0 q >/dev/null 2>&1; then
-              echo "✅ Xvfb is ready"
-              break
-            fi
-            echo "⏳ Waiting for Xvfb..."
-            sleep 1
-          done
-          python3 app.py
+          xvfb-run --auto-servernum python3 app.py
 
       - name: 🧽 清理进程和临时文件
         if: always()
